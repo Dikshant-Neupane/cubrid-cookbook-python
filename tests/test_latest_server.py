@@ -99,6 +99,31 @@ class DecisionTests(unittest.TestCase):
         self.assertNotIn("are the newest-stable test", text)
         self.assertNotIn("passed", text)
 
+    def test_newer_summary_names_the_canary_and_excludes_it_from_the_matrix(self) -> None:
+        for rel in (REL_1150, REL_1147):
+            with self.subTest(rel=rel):
+                decision = latest_server.decide(REF_B, rel, REF_A, REL_1146)
+                text = latest_server.describe(decision, REF_B, rel, REF_A, REL_1146, "2026-10-26")
+                self.assertIn(f"`{REF_B}`", text)
+                self.assertIn("not part of the support matrix", text)
+
+    def test_not_newer_summary_promises_nothing_extra_to_test(self) -> None:
+        for rel in (REL_1145, REL_1146):
+            with self.subTest(rel=rel):
+                decision = latest_server.decide(REF_B, rel, REF_A, REL_1146)
+                text = latest_server.describe(decision, REF_B, rel, REF_A, REL_1146, "2026-10-26")
+                self.assertIn("nothing extra to test", text)
+                self.assertNotIn("canary", text)
+
+    def test_unverified_summary_with_empty_inputs_names_the_failure(self) -> None:
+        decision = latest_server.decide("", "", REF_A, REL_1146)
+        text = latest_server.describe(decision, "", "", REF_A, REL_1146, "")
+        self.assertIn("UNVERIFIED", text)
+        self.assertIn("not resolved", text)
+        self.assertIn("unknown", text)
+        self.assertIn("unknown date", text)
+        self.assertNotIn("passed", text)
+
     def test_report_appends_to_the_summary_and_fails_a_failed_canary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             summary = Path(tmp) / "summary"
