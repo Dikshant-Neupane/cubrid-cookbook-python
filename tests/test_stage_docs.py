@@ -142,6 +142,26 @@ class RewriteTests(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("templates/error-handling", errors[0])
 
+    def test_link_leaving_repository_is_reported_and_left_intact(self) -> None:
+        for target in ("../outside.md", ".."):
+            source = f"[x]({target})\n"
+            text, errors = self.rewrite(source)
+            self.assertEqual(len(errors), 1)
+            self.assertIn("leaves the repository", errors[0])
+            self.assertEqual(text, source)
+
+    def test_repository_root_link_becomes_main_tree_url(self) -> None:
+        tree_url = f"{GITHUB_BASE}/tree/main"
+        text, errors = self.rewrite("[x](.)\n[y](./)\n[z](./#top)\n")
+        self.assertEqual(errors, [])
+        self.assertEqual(text, f"[x]({tree_url})\n[y]({tree_url})\n[z]({tree_url}#top)\n")
+
+    def test_query_only_target_is_returned_unchanged(self) -> None:
+        source = "[x](?raw=1)\n"
+        text, errors = self.rewrite(source)
+        self.assertEqual(errors, [])
+        self.assertEqual(text, source)
+
     def test_query_and_fragment_after_a_staged_file_keep_their_order(self) -> None:
         # A target with both delimiters must split at the first one, otherwise
         # the query stays in the path and the existence check fails (#361).
